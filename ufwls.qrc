@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/res/ico">
+        <file>ufwls.ico</file>
+    </qresource>
+</RCC>
