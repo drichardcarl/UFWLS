@@ -59,9 +59,10 @@ public slots:
     void onShowHideTrayDbClick(QSystemTrayIcon::ActivationReason reason);
     void onShowHide(bool checked);
     void onExit(bool checked);
+    void updateLastRowClicked();
 
 private:
-    void _load();
+    void _load(int loadingMode = -1);
     void _setup();
     void _setupTrayIcon();
 
@@ -71,6 +72,8 @@ private:
     WinAddContact* AddContactWindow;
     DbManager* dbmngr;
     QSystemTrayIcon* trayIcon;
+    QTableWidgetItem* lastItem;
+    int lastRow;
 
 };
 

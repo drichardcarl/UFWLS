@@ -24,10 +24,7 @@ void WinAddContact::showEvent(QShowEvent* e){
         (mode) ? false : true
     );
 
-    if (!mode)
-        ui->TxtContactName->setFocus();
-    else
-        ui->TxtContactNumber->setFocus();
+    ui->TxtContactName->setFocus();
 }
 
 void WinAddContact::on_BtnAdd_clicked()
@@ -98,4 +95,11 @@ void WinAddContact::configForEdit(const QString& cname, const QString& cnum){
 
 void WinAddContact::configForAdd(){
     this->mode = 0;
+    ui->TxtContactName->clear();
+    ui->TxtContactNumber->clear();
+}
+
+void WinAddContact::clearInfo(){
+    txtContactName = "";
+    txtContactNum = "";
 }

@@ -5,7 +5,9 @@ UFWLS::UFWLS(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::UFWLS),
     AddContactWindow(new WinAddContact),
-    trayIcon(nullptr)
+    trayIcon(nullptr),
+    lastRow(0),
+    lastItem(nullptr)
 {
     ui->setupUi(this);
 }
@@ -29,6 +31,7 @@ void UFWLS::_setup(){
     QObject::connect(&mon, &QTimer::timeout, this, &UFWLS::handleTimeout);
     QObject::connect(ui->txtEmergencyTxtMsg, &QPlainTextEdit::textChanged, this, &UFWLS::updateCharCount);
     QObject::connect(ui->tableWidget, &QTableWidget::itemDoubleClicked, this, &UFWLS::editContact);
+    QObject::connect(ui->tableWidget, &QTableWidget::itemSelectionChanged, this, &UFWLS::updateLastRowClicked);
 //    QObject::connect(ui->tableWidget, &QTableWidget::itemDoubleClicked, this, &UFWLS::checkNumberFormat);
     mon.setInterval(1000);
 
@@ -76,10 +79,17 @@ void UFWLS::_setup(){
     chart->setTrayIcon(this->trayIcon);
 }
 
-void UFWLS::_load(){
+void UFWLS::_load(int loadingMode){
+    ui->tableWidget->setSortingEnabled(false);
+    QObject::disconnect(ui->tableWidget, &QTableWidget::itemSelectionChanged, this, &UFWLS::updateLastRowClicked);
+
     QSqlQuery query;
     query.exec("SELECT contactName, contactNumber FROM contacts");
     int i = 0;
+    QString lastContactNum = AddContactWindow->getContactInfo().at(1);
+    // clear contents to prevent false detections during delete operations
+    AddContactWindow->clearInfo();
+    qDebug() << "lastContactNum: " << lastContactNum;
     while(query.next()){
         ui->tableWidget->setRowCount(i+1);
         for (int j=0; j<2; ++j){
@@ -88,10 +98,46 @@ void UFWLS::_load(){
             item->setText(query.value(j).toString());
             qDebug() << query.value(j).toString();
             ui->tableWidget->setItem(i, j, item);
+
+            if (query.value(j).toString() == lastContactNum){
+                lastItem = ui->tableWidget->item(i, j);
+                lastRow = lastItem->row();
+            }
         }
         ++i;
     }
     if (i == 0) ui->tableWidget->setRowCount(0);
+
+    ui->tableWidget->setSortingEnabled(true);
+    QObject::connect(ui->tableWidget, &QTableWidget::itemSelectionChanged, this, &UFWLS::updateLastRowClicked);
+
+    qDebug() << "lastRow here : " << this->lastRow;
+    // loading mode
+    //      default: scroll to top
+    //      0 : scroll to bottom
+    //      1 : scroll to last item
+
+    switch(loadingMode){
+    case 0:
+        ui->tableWidget->scrollToBottom();
+        ui->tableWidget->selectRow(ui->tableWidget->rowCount()-1);
+        break;
+    case 1:
+        ui->tableWidget->selectRow(lastItem->row());
+        ui->tableWidget->scrollToItem(lastItem);
+        break;
+    case 2:
+        qDebug() << "lastRow before " << this->lastRow;
+        lastRow = (lastRow >= ui->tableWidget->rowCount()) ? ui->tableWidget->rowCount()-1 : lastRow;
+        ui->tableWidget->selectRow(lastRow);
+        break;
+    default:
+        ui->tableWidget->scrollToTop();
+        ui->tableWidget->selectRow(0);
+    }
+
+
+
 }
 
 void UFWLS::handleTimeout()
@@ -101,7 +147,12 @@ void UFWLS::handleTimeout()
                                   QString::number(chart->distance,'f',2) + " m</b> "
                                   "@ <span style=\"color:#3949AB\">" + chart->strDateTime + "</span>]");
 }
-
+void UFWLS::updateLastRowClicked(){
+    lastRow = ui->tableWidget->currentRow();
+    lastItem = ui->tableWidget->currentItem();
+    qDebug() << "lastRow : " << this->lastRow
+             << "rowCount : " << ui->tableWidget->rowCount();
+}
 void UFWLS::updateCharCount(){
     QString currentText = ui->txtEmergencyTxtMsg->document()->toPlainText();
     int currentCharCount = currentText.size();
@@ -129,7 +180,7 @@ void UFWLS::editContact(QTableWidgetItem* item){
     AddContactWindow->configForEdit(cname, cnum);
 
     if (AddContactWindow->exec() == QDialog::Accepted)
-        _load();
+        _load(1);
 }
 
 void UFWLS::checkNumberFormat(QTableWidgetItem* item){
@@ -174,28 +225,13 @@ void UFWLS::keyPressEvent(QKeyEvent *event){
 
                 if (res == QMessageBox::Yes){
                     dbmngr->deleteContact(contactNo);
-                    _load();
+                    _load(2);
                 }
             }
         }
     }
 
     if (event->key() == Qt::Key_F2){
-        if (ui->tableWidget->hasFocus()){
-//            int rowCount = ui->tableWidget->rowCount();
-//            QTableWidgetItem* lastContactName = ui->tableWidget->item(rowCount-1, 0);
-//            QTableWidgetItem* lastContactNum = ui->tableWidget->item(rowCount-1, 1);
-//            if (lastContactName->text() == "" || lastContactNum->text() == ""){
-//                alert(1,
-//                      "Invalid Operation!",
-//                      "Please fill out the last row first before adding a new row.");
-//            }
-//            else {
-//                ui->tableWidget->insertRow(rowCount);
-//                ui->tableWidget->setItem(rowCount, 0, new QTableWidgetItem(""));
-//                ui->tableWidget->setItem(rowCount, 1, new QTableWidgetItem(""));
-//            }
-        }
         AddContactWindow->configForAdd();
         int res = AddContactWindow->exec();
         if (res == QDialog::Accepted){
@@ -206,7 +242,7 @@ void UFWLS::keyPressEvent(QKeyEvent *event){
 ////            ui->tableWidget->setItem(rowCount, 0, new QTableWidgetItem(contactInfo.at(0)));
 ////            ui->tableWidget->setItem(rowCount, 1, new QTableWidgetItem(contactInfo.at(1)));
 //            dbmngr->addContact(contactInfo.at(0), contactInfo.at(1));
-            _load();
+            _load(1);
         }
     }
 }

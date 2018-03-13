@@ -24,6 +24,7 @@ public:
     void setDbManager(DbManager* dbmngr);
     void configForEdit(const QString& cname, const QString& cnum);
     void configForAdd();
+    void clearInfo();
 
 protected:
     void showEvent(QShowEvent* e);
