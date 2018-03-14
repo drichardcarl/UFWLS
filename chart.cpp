@@ -30,13 +30,12 @@
 #include "chart.h"
 #include <QCategoryAxis>
 
-Chart::Chart(QGraphicsItem *parent, Qt::WindowFlags wFlags):
+Chart::Chart(QSerialPort* serial, QGraphicsItem *parent, Qt::WindowFlags wFlags):
+    serial(serial),
     QChart(QChart::ChartTypeCartesian, parent, wFlags),
     xAxis(new QDateTimeAxis),
     xval(0),
     yval(0),
-    prevX(0),
-    prevY(0),
     trayIcon(nullptr)
 {
     QObject::connect(&watcher, &QTimer::timeout, this, &Chart::handleTimeout);
@@ -57,7 +56,6 @@ Chart::Chart(QGraphicsItem *parent, Qt::WindowFlags wFlags):
     xValue.setTime(QTime::currentTime());
     xval = xValue.toMSecsSinceEpoch();
     yval = 3;
-    prevY = 3;
     data->append(xval, yval);
 
 //    xValue.setDate(QDate::currentDate());
@@ -91,6 +89,7 @@ Chart::Chart(QGraphicsItem *parent, Qt::WindowFlags wFlags):
     QDateTime rangeFrom = QDateTime::fromMSecsSinceEpoch(now.toMSecsSinceEpoch()-7500);
     QDateTime rangeTo = QDateTime::fromMSecsSinceEpoch(now.toMSecsSinceEpoch()+7500);
     xAxis->setRange(rangeFrom,rangeTo);
+    prevTime = now;
 
     QCategoryAxis *axisY3 = new QCategoryAxis;
     axisY3->append("<span style=\"color:#388E3C\"><b>Normal</b></span>", 1.33);
@@ -118,12 +117,32 @@ Chart::~Chart()
 
 void Chart::handleTimeout()
 {
+    if (!serial->isOpen()) {
+        initSerial = false;
+        return;
+    }
+    if (!initSerial){
+        if (serial->bytesAvailable()){
+            serial->readAll();
+            return;
+        }
+        else
+            initSerial = true;
+    }
+
+    char buffer[250];
+    serial->readLine(buffer, 250);
+    if (QString(buffer).size() == 0){
+        noReading = true;
+        return;
+    }
+
     qreal h = plotArea().height();
     qreal w = plotArea().width();
     int xtc = ceil(w/(h/6));
     qDebug() << xtc;
     xAxis->setTickCount(xtc);
-    qreal x = 5000 * (plotArea().width()/15000);
+    qreal x = plotArea().width()/15000;
 
     QDateTime dateTime;
     dateTime.setDate(QDate::currentDate());
@@ -131,16 +150,23 @@ void Chart::handleTimeout()
     xval = dateTime.toMSecsSinceEpoch();
     strDateTime = dateTime.toString("MM/dd/yyyy HH:mm:ss");
 
-//    yval = random.global()->bounded(5);
-    yval = qrand() % 5;
-    if (yval - prevY > 0.2){
-        yval = prevY + 0.2;
-    }
-    if (yval - prevY < -0.2){
-        yval = prevY - 0.2;
-    }
-    prevY = yval;
-    distance = yval;
+    qint64 nowMs = dateTime.toMSecsSinceEpoch();
+    qint64 prevMs = prevTime.toMSecsSinceEpoch();
+    qint64 diff = nowMs-prevMs;
+
+    qDebug() << "now : " << nowMs
+             << "prev : " << prevMs
+             << "diff : " << diff;
+
+    prevTime = dateTime;
+
+    yval = QString(buffer).toDouble();
+    distance = 4 - yval; // base height - sensor distance
+    yval = distance;
+
+    qDebug() << "serial buffer:" << buffer
+             << "yval: " << yval
+             << "distance: " << distance;
 
     QColor color;
     QPen pen;
@@ -168,15 +194,7 @@ void Chart::handleTimeout()
 
     }
     data->append(xval, yval);
-    qDebug() << "xval : " << xval
-             << "prevX : " << prevX;
-    scroll(x,0);
-    prevX = xval;
-
-
-
-
-    qDebug() << xval << " ; " << yval;
+    scroll(diff*x, 0);
 }
 
 void Chart::setTrayIcon(QSystemTrayIcon* trayIcon){
@@ -184,6 +202,7 @@ void Chart::setTrayIcon(QSystemTrayIcon* trayIcon){
 }
 
 void Chart::toggleTrayMsg(){
+    if (noReading) return;
     if (alertStatus == "Warning"){
         trayIcon->showMessage("Ultrasonic Flood Water Level Sensor (UFWLS)",
                               strDateTime + "\n"

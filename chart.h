@@ -42,6 +42,8 @@
 #include <QtCore/QDebug>
 #include <QDateTimeAxis>
 #include <QSystemTrayIcon>
+#include <QSerialPort>
+#include <QByteArray>
 
 #include "alert.hpp"
 
@@ -57,7 +59,7 @@ class Chart: public QChart
 {
     Q_OBJECT
 public:
-    Chart(QGraphicsItem *parent = 0, Qt::WindowFlags wFlags = 0);
+    Chart(QSerialPort* serial, QGraphicsItem *parent = 0, Qt::WindowFlags wFlags = 0);
     virtual ~Chart();
 
     void setTrayIcon(QSystemTrayIcon* trayIcon);
@@ -81,11 +83,13 @@ private:
     qint64 xval;
     qreal yval;
 
-    qint64 prevX;
-    qreal prevY;
-
     QSystemTrayIcon* trayIcon;
     QString alertStatus;
+
+    QSerialPort* serial;
+    bool initSerial = false;
+    QDateTime prevTime;
+    bool noReading = false;
 
 };
 //![1]

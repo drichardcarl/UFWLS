@@ -7,7 +7,9 @@ UFWLS::UFWLS(QWidget *parent) :
     AddContactWindow(new WinAddContact),
     trayIcon(nullptr),
     lastRow(0),
-    lastItem(nullptr)
+    lastItem(nullptr),
+    settings(new SettingsDialog),
+    serial(new QSerialPort)
 {
     ui->setupUi(this);
 }
@@ -32,11 +34,14 @@ void UFWLS::_setup(){
     QObject::connect(ui->txtEmergencyTxtMsg, &QPlainTextEdit::textChanged, this, &UFWLS::updateCharCount);
     QObject::connect(ui->tableWidget, &QTableWidget::itemDoubleClicked, this, &UFWLS::editContact);
     QObject::connect(ui->tableWidget, &QTableWidget::itemSelectionChanged, this, &UFWLS::updateLastRowClicked);
+
+    QObject::connect(settings, &SettingsDialog::applied, this, &UFWLS::initSerialDeviceConn);
+    QObject::connect(settings, &SettingsDialog::dcntd, this, &UFWLS::xSerialDeviceConn);
 //    QObject::connect(ui->tableWidget, &QTableWidget::itemDoubleClicked, this, &UFWLS::checkNumberFormat);
     mon.setInterval(1000);
 
     QFont fontTitle("Calibri",15,QFont::Bold);
-    chart = new Chart;
+    chart = new Chart(serial);
     chart->setTitle("<span style=\"color:#0D47A1;\">Ultrasonic Flood Water Level Sensor (UFWLS)</span>");
     chart->setTitleFont(fontTitle);
     chart->legend()->hide();
@@ -140,10 +145,42 @@ void UFWLS::_load(int loadingMode){
 
 }
 
+void UFWLS::initSerialDeviceConn(){
+    SettingsDialog::Settings p = settings->settings();
+    serial->setPortName(p.name);
+    serial->setBaudRate(p.baudRate);
+    serial->setDataBits(p.dataBits);
+    serial->setParity(p.parity);
+    serial->setStopBits(p.stopBits);
+    serial->setFlowControl(p.flowControl);
+
+    if (serial->open(QIODevice::ReadWrite)) {
+        qDebug() << "Serial ok";
+        alert(0,
+              "Success!",
+              tr("Connected to %1 : %2, %3, %4, %5, %6")
+                          .arg(p.name).arg(p.stringBaudRate).arg(p.stringDataBits)
+                          .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl));
+        _enWidgets(0);
+    }
+    else {
+        serial->close();
+        alert(2, "Open Error!", serial->errorString());
+    }
+
+}
+
+void UFWLS::xSerialDeviceConn(){
+    if (serial->isOpen())
+        serial->close();
+
+    _enWidgets(1);
+}
+
 void UFWLS::handleTimeout()
 {
     ui->lblAlertLevel->setText("alert level [<b>" + chart->alertLevel + "</b>]");
-    ui->lblSensorReading->setText("sensor reading [<b>" +
+    ui->lblSensorReading->setText("water level [<b>" +
                                   QString::number(chart->distance,'f',2) + " m</b> "
                                   "@ <span style=\"color:#3949AB\">" + chart->strDateTime + "</span>]");
 }
@@ -312,3 +349,22 @@ void UFWLS::closeEvent(QCloseEvent* event){
     event->ignore();
 }
 
+void UFWLS::_enWidgets(int val){
+    switch(val){
+    case 0:
+        ui->notifyBtn->setEnabled(true);
+        ui->txtEmergencyTxtMsg->setEnabled(true);
+        settings->togglecdc(false, true);
+        ui->configBtn->setEnabled(true);
+        break;
+    case 1:
+        ui->notifyBtn->setEnabled(false);
+        ui->txtEmergencyTxtMsg->setEnabled(false);
+        settings->togglecdc(true, false);
+    }
+}
+
+void UFWLS::on_configBtn_clicked()
+{
+    settings->show();
+}

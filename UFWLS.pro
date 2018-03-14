@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui charts sql
+QT       += core gui charts sql serialport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -29,18 +29,21 @@ SOURCES += \
     chart.cpp \
     alert.cpp \
     winaddcontact.cpp \
-    dbmanager.cpp
+    dbmanager.cpp \
+    settingsdialog.cpp
 
 HEADERS += \
         ufwls.h \
     chart.h \
     alert.hpp \
     winaddcontact.h \
-    dbmanager.hpp
+    dbmanager.hpp \
+    settingsdialog.h
 
 FORMS += \
         ufwls.ui \
-    winaddcontact.ui
+    winaddcontact.ui \
+    settingsdialog.ui
 
 RESOURCES += \
     ufwls.qrc

@@ -20,11 +20,13 @@
 #include <QMenu>
 #include <QEvent>
 #include <QCloseEvent>
+#include <QSerialPort>
 
 #include "alert.hpp"
 #include "chart.h"
 #include "winaddcontact.h"
 #include "dbmanager.hpp"
+#include "settingsdialog.h"
 
 typedef QPair<QPointF, QString> Data;
 typedef QList<Data> DataList;
@@ -60,11 +62,17 @@ public slots:
     void onShowHide(bool checked);
     void onExit(bool checked);
     void updateLastRowClicked();
+    void initSerialDeviceConn();
+    void xSerialDeviceConn();
+
+private slots:
+    void on_configBtn_clicked();
 
 private:
     void _load(int loadingMode = -1);
     void _setup();
     void _setupTrayIcon();
+    void _enWidgets(int val);
 
     Ui::UFWLS *ui;
     QTimer mon;
@@ -74,6 +82,9 @@ private:
     QSystemTrayIcon* trayIcon;
     QTableWidgetItem* lastItem;
     int lastRow;
+
+    SettingsDialog* settings;
+    QSerialPort* serial;
 
 };
 
