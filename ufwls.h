@@ -42,6 +42,12 @@ class UFWLS : public QWidget
     Q_OBJECT
 
 public:
+    struct SMS{
+        QString contactName;
+        QString contactNum;
+        QString msg;
+    };
+
     explicit UFWLS(QWidget *parent = 0);
     ~UFWLS();
 
@@ -64,9 +70,12 @@ public slots:
     void updateLastRowClicked();
     void initSerialDeviceConn();
     void xSerialDeviceConn();
+    void scheduleSMS();
 
 private slots:
     void on_configBtn_clicked();
+
+    void on_notifyBtn_clicked();
 
 private:
     void _load(int loadingMode = -1);
@@ -76,6 +85,7 @@ private:
 
     Ui::UFWLS *ui;
     QTimer mon;
+    QTimer smsScheduler;
     Chart* chart;
     WinAddContact* AddContactWindow;
     DbManager* dbmngr;
@@ -85,6 +95,10 @@ private:
 
     SettingsDialog* settings;
     QSerialPort* serial;
+    // SMS_BUFFER = [SMS,...]
+    // SMS = [NAME, CONTACT #, MESSAGE]
+    QList<SMS> smsBuffer;
+    int smsIndex;
 
 };
 

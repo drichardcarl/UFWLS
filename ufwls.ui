@@ -35,17 +35,18 @@ background-color:white;
 font-family:Calibri;
 }
 
-QPushButton{
+QPushButton#notifyBtn,
+QPushButton#configBtn{
     background-color: #b71c1c;
 	border: solid 1px;
 	color: white;
 }
-QPushButton:pressed {
+QPushButton#notifyBtn:pressed {
     background-color: #791010;
     border-style: inset;
 }
 
-QPushButton:disabled {
+QPushButton#notifyBtn:disabled {
     background-color: #e57373;
 	color: white;
 }
@@ -61,6 +62,10 @@ color:#b71c1c;
 
 QTextEdit:disabled{
 color: black;
+}
+
+QHeaderView{
+	font-size: 13px;
 }</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
@@ -279,6 +284,9 @@ p, li { white-space: pre-wrap; }
          <property name="autoFillBackground">
           <bool>false</bool>
          </property>
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
          <property name="frameShape">
           <enum>QFrame::NoFrame</enum>
          </property>
@@ -328,7 +336,7 @@ p, li { white-space: pre-wrap; }
           <bool>true</bool>
          </property>
          <attribute name="horizontalHeaderVisible">
-          <bool>false</bool>
+          <bool>true</bool>
          </attribute>
          <attribute name="horizontalHeaderCascadingSectionResizes">
           <bool>false</bool>
@@ -358,7 +366,7 @@ p, li { white-space: pre-wrap; }
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label_4">
+        <widget class="QLabel" name="lblETM">
          <property name="minimumSize">
           <size>
            <width>300</width>
@@ -375,12 +383,14 @@ p, li { white-space: pre-wrap; }
           <font>
            <family>Calibri</family>
            <pointsize>13</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
+           <weight>50</weight>
+           <bold>false</bold>
           </font>
          </property>
          <property name="text">
-          <string>&lt;hr&gt;Emergency Text Message&lt;hr&gt;</string>
+          <string>&lt;hr&gt;
+&lt;b&gt;Emergency Text Message&lt;/b&gt;
+&lt;hr&gt;</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>

@@ -31,6 +31,7 @@ int UFWLS::init(const QString& db){
 
 void UFWLS::_setup(){
     QObject::connect(&mon, &QTimer::timeout, this, &UFWLS::handleTimeout);
+    QObject::connect(&smsScheduler, &QTimer::timeout, this, &UFWLS::scheduleSMS);
     QObject::connect(ui->txtEmergencyTxtMsg, &QPlainTextEdit::textChanged, this, &UFWLS::updateCharCount);
     QObject::connect(ui->tableWidget, &QTableWidget::itemDoubleClicked, this, &UFWLS::editContact);
     QObject::connect(ui->tableWidget, &QTableWidget::itemSelectionChanged, this, &UFWLS::updateLastRowClicked);
@@ -160,12 +161,13 @@ void UFWLS::initSerialDeviceConn(){
               "Success!",
               tr("Connected to %1 : %2, %3, %4, %5, %6")
                           .arg(p.name).arg(p.stringBaudRate).arg(p.stringDataBits)
-                          .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl));
+                          .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl),
+              this);
         _enWidgets(0);
     }
     else {
         serial->close();
-        alert(2, "Open Error!", serial->errorString());
+        alert(2, "Open Error!", serial->errorString(), this);
     }
 
 }
@@ -184,6 +186,35 @@ void UFWLS::handleTimeout()
                                   QString::number(chart->distance,'f',2) + " m</b> "
                                   "@ <span style=\"color:#3949AB\">" + chart->strDateTime + "</span>]");
 }
+
+void UFWLS::scheduleSMS(){
+    if (smsIndex >= smsBuffer.size()){
+        smsScheduler.stop();
+        ui->txtEmergencyTxtMsg->setEnabled(true);
+        ui->lblETM->setText("<hr><b>Emergency Text Message</b><hr>");
+        ui->notifyBtn->setText("Notify");
+        smsBuffer.clear();
+        alert(0,
+              "Success!",
+              "I'm done commanding the serial device to send the SMS.<br>"
+              "Again, <b>I can't verify</b> if the serial device has successfully sent the SMS or not.",
+              this);
+        return;
+    }
+
+    SMS sms = smsBuffer.at(smsIndex++);
+    QString lbl = "<hr>"
+                  "<b>Emergency Text Message</b><br/>"
+                  "<i>Sending to "
+                  "<span style=\"color:blue\">" +(sms.contactName).left(12) + "...</span>"
+                  " (" + QString::number(smsIndex) + "/" + QString::number(smsBuffer.size()) + ")</i>"
+                  "<hr>";
+    ui->lblETM->setText(lbl);
+    QString cmd = "\r\n+SSMS: \"" + sms.contactNum + "\""
+                  "\r\n" + sms.msg + "\r\n";
+    serial->write(cmd.toStdString().c_str());
+}
+
 void UFWLS::updateLastRowClicked(){
     lastRow = ui->tableWidget->currentRow();
     lastItem = ui->tableWidget->currentItem();
@@ -258,7 +289,8 @@ void UFWLS::keyPressEvent(QKeyEvent *event){
                                 "Critical Operation!",
                                 "Are you sure you want to remove this emergency contact?<br>"
                                 "Name : <b>" + name + "</b><br>"
-                                "Contact # : <b>" + contactNo + "</b>");
+                                "Contact # : <b>" + contactNo + "</b>",
+                                this);
 
                 if (res == QMessageBox::Yes){
                     dbmngr->deleteContact(contactNo);
@@ -367,4 +399,58 @@ void UFWLS::_enWidgets(int val){
 void UFWLS::on_configBtn_clicked()
 {
     settings->show();
+}
+
+void UFWLS::on_notifyBtn_clicked()
+{
+    if (ui->notifyBtn->text() == "Notify"){
+        // disable editing the text message
+        ui->txtEmergencyTxtMsg->setEnabled(false);
+        // notify
+        alert(1,
+              "Warning!",
+              "I am about to command the serial device to send the SMS.<br>"
+              "Please be aware that <b>I can't verify</b> if the serial device has successfully sent the SMS or not!",
+              this);
+
+        QString lbl = "<hr>"
+                      "<b>Emergency Text Message</b><br/>"
+                      "<i>initializing ...</i>"
+                      "<hr>";
+        ui->lblETM->setText(lbl);
+
+        // fill SMS_BUFFER with SMS to sent
+        for (int i=0; i<ui->tableWidget->rowCount(); ++i){
+            SMS sms;
+            QTableWidgetItem* item;
+            // contact name
+            item = ui->tableWidget->item(i, 0);
+            sms.contactName = item->text();
+            // contact number
+            item = ui->tableWidget->item(i, 1);
+            sms.contactNum = item->text();
+            // message
+            sms.msg = ui->txtEmergencyTxtMsg->document()->toPlainText();
+
+            smsBuffer.append(sms);
+        }
+        smsIndex = 0;
+        smsScheduler.setInterval(3000);
+        smsScheduler.start();
+        ui->notifyBtn->setText("Cancel");
+    }
+    else if (ui->notifyBtn->text() == "Cancel"){
+        int res = alert(3,
+                        "Critical Operation!",
+                        "Are you sure you want to cancel sending SMS commands to the serial device?",
+                        this);
+
+        if (res == QMessageBox::Yes){
+            smsScheduler.stop();
+            ui->txtEmergencyTxtMsg->setEnabled(true);
+            ui->lblETM->setText("<hr><b>Emergency Text Message</b><hr>");
+            ui->notifyBtn->setText("Notify");
+            smsBuffer.clear();
+        }
+    }
 }

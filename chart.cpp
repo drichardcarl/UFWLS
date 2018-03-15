@@ -136,6 +136,7 @@ void Chart::handleTimeout()
         noReading = true;
         return;
     }
+    noReading = false;
 
     qreal h = plotArea().height();
     qreal w = plotArea().width();

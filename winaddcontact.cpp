@@ -33,12 +33,12 @@ void WinAddContact::on_BtnAdd_clicked()
     txtContactNum = ui->TxtContactNumber->text();
 
     if (txtContactName == ""){
-        alert(1, "Invalid Field", "Please enter a valid <b>Contact Name</b>!");
+        alert(1, "Invalid Field", "Please enter a valid <b>Contact Name</b>!", this);
         return;
     }
 
     if (txtContactNum.size() != 15){
-        alert(1, "Invalid Field", "Please enter a valid <b>Contact Number</b>!");
+        alert(1, "Invalid Field", "Please enter a valid <b>Contact Number</b>!", this);
         return;
     }
 
@@ -58,7 +58,8 @@ void WinAddContact::on_BtnAdd_clicked()
                   "The emergency contact number specified (<b>" + existingContact.at(1) + "</b>) "
                   "is already associated to emergency contact person "
                   "<b>" + existingContact.at(0) + "</b>!<br><br>"
-                  "Please choose another contact number.");
+                  "Please choose another contact number.",
+                  this);
             return;
         }
         dbmngr->addContact(txtContactName, txtContactNum);
