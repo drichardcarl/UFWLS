@@ -67,6 +67,7 @@ public:
     QString alertLevel = "NO READING";
     QString strDateTime = "00/00/0000 00:00:00";
     qreal distance = 0.00;
+    bool initDevice = false;
 
 public slots:
     void handleTimeout();
@@ -76,7 +77,7 @@ private:
     QTimer watcher;
     QTimer trayMsgMngr;
 //    QRandomGenerator random;
-    QSplineSeries *data;
+    QLineSeries *data;
     QString title;
     QDateTimeAxis *xAxis;
     QValueAxis *yAxis;
@@ -90,6 +91,7 @@ private:
     bool initSerial = false;
     QDateTime prevTime;
     bool noReading = false;
+    int cNoReading = 0;
 
 };
 //![1]

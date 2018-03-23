@@ -156,6 +156,9 @@ void UFWLS::initSerialDeviceConn(){
     serial->setFlowControl(p.flowControl);
 
     if (serial->open(QIODevice::ReadWrite)) {
+        serial->setDataTerminalReady(true);
+        serial->setRequestToSend(true);
+        serial->setReadBufferSize(0);
         qDebug() << "Serial ok";
         alert(0,
               "Success!",
@@ -163,7 +166,7 @@ void UFWLS::initSerialDeviceConn(){
                           .arg(p.name).arg(p.stringBaudRate).arg(p.stringDataBits)
                           .arg(p.stringParity).arg(p.stringStopBits).arg(p.stringFlowControl),
               this);
-        _enWidgets(0);
+//        _enWidgets(0);
     }
     else {
         serial->close();
@@ -185,6 +188,14 @@ void UFWLS::handleTimeout()
     ui->lblSensorReading->setText("water level [<b>" +
                                   QString::number(chart->distance,'f',2) + " m</b> "
                                   "@ <span style=\"color:#3949AB\">" + chart->strDateTime + "</span>]");
+    if (chart->initDevice){
+        ui->lblDeviceStatus->setText("device status [<b><span style=\"color: green\">READY</span></b>]");
+        _enWidgets(0);
+    }
+    else{
+        ui->lblDeviceStatus->setText("device status [<b><span style=\"color: red\">NOT READY</span></b>]");
+        _enWidgets(1);
+    }
 }
 
 void UFWLS::scheduleSMS(){
@@ -213,6 +224,7 @@ void UFWLS::scheduleSMS(){
     QString cmd = "\r\n+SSMS: \"" + sms.contactNum + "\""
                   "\r\n" + sms.msg + "\r\n";
     serial->write(cmd.toStdString().c_str());
+    serial->flush();
 }
 
 void UFWLS::updateLastRowClicked(){
@@ -224,14 +236,14 @@ void UFWLS::updateLastRowClicked(){
 void UFWLS::updateCharCount(){
     QString currentText = ui->txtEmergencyTxtMsg->document()->toPlainText();
     int currentCharCount = currentText.size();
-    int remainingCharCount = 160-currentCharCount;
+    int remainingCharCount = 159-currentCharCount;
     remainingCharCount = (remainingCharCount < 0) ? 0 : remainingCharCount;
 
     ui->lblCharCount->setText("<b>" + QString::number(remainingCharCount) + "</b> characters left.");
 
-    if (currentCharCount > 160){
-        QString text160 = currentText.left(160);
-        ui->txtEmergencyTxtMsg->setPlainText(text160);
+    if (currentCharCount > 159){
+        QString text159 = currentText.left(159);
+        ui->txtEmergencyTxtMsg->setPlainText(text159);
 
         QTextCursor cursor = ui->txtEmergencyTxtMsg->textCursor();
         cursor.movePosition(QTextCursor::End);
@@ -313,6 +325,21 @@ void UFWLS::keyPressEvent(QKeyEvent *event){
 //            dbmngr->addContact(contactInfo.at(0), contactInfo.at(1));
             _load(1);
         }
+    }
+
+    if (event->key() == Qt::Key_F1){
+        alert(0,
+              "About UFWLS",
+              "<span style=\"text-align:center;\">"
+              "<b><u>UFWLS</u></b><br>"
+              "Ultrasonic Flood Water Level Sensor<br>"
+              "Written using Qt Framework<br>"
+              "<br><br>"
+              "<b><u>Programmer</u></b><br>"
+              "Carl Richard Dumdum<br>"
+              "All rights reserved 2018"
+              "</span>",
+              this);
     }
 }
 

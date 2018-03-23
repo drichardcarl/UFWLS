@@ -39,12 +39,12 @@ Chart::Chart(QSerialPort* serial, QGraphicsItem *parent, Qt::WindowFlags wFlags)
     trayIcon(nullptr)
 {
     QObject::connect(&watcher, &QTimer::timeout, this, &Chart::handleTimeout);
-    watcher.setInterval(5000);
+    watcher.setInterval(500);
 
     QObject::connect(&trayMsgMngr, &QTimer::timeout, this, &Chart::toggleTrayMsg);
     trayMsgMngr.setInterval(30000);
 //    random.seed();
-    data = new QSplineSeries(this);
+    data = new QLineSeries(this);
     QPen green(Qt::red);
     green.setWidth(3);
     data->setPen(green);
@@ -86,8 +86,8 @@ Chart::Chart(QSerialPort* serial, QGraphicsItem *parent, Qt::WindowFlags wFlags)
 //    axisY()->setTitleText("Water Distance from Sensor [m]");
 
     QDateTime now = QDateTime(QDate::currentDate(), QTime::currentTime());
-    QDateTime rangeFrom = QDateTime::fromMSecsSinceEpoch(now.toMSecsSinceEpoch()-7500);
-    QDateTime rangeTo = QDateTime::fromMSecsSinceEpoch(now.toMSecsSinceEpoch()+7500);
+    QDateTime rangeFrom = QDateTime::fromMSecsSinceEpoch(now.toMSecsSinceEpoch()-110000);
+    QDateTime rangeTo = QDateTime::fromMSecsSinceEpoch(now.toMSecsSinceEpoch()+10000);
     xAxis->setRange(rangeFrom,rangeTo);
     prevTime = now;
 
@@ -119,35 +119,75 @@ void Chart::handleTimeout()
 {
     if (!serial->isOpen()) {
         initSerial = false;
+        initDevice = false;
         return;
     }
     if (!initSerial){
-        if (serial->bytesAvailable()){
-            serial->readAll();
-            return;
-        }
-        else
-            initSerial = true;
+        serial->readAll();
+        initSerial = true;
+
+        QFont fontPoint("Calibri",30,QFont::Bold);
+        data->setPointLabelsFont(fontPoint);
+        data->setPointsVisible(true);
+        return;
     }
 
     char buffer[250];
     serial->readLine(buffer, 250);
-    if (QString(buffer).size() == 0){
-        noReading = true;
+    qDebug() << "baffer " << buffer;
+
+    // format: "yy/MM/dd HH:mm:ss"
+    // ex: 18/03/23 07:35:59 3.98
+    QString strBuffer = QString(buffer);
+    if (!initDevice){
+        if (strBuffer == "Status: Device Ready\r\n"){
+            initDevice = true;
+            return;
+        }
+        else return;
+    }
+
+    if (strBuffer == 0){
+        ++cNoReading;
+        if (cNoReading >= 3)
+            noReading = true;
         return;
     }
+
+
+    strBuffer = "20" + strBuffer;
+    qDebug() << "steBuffer: " << strBuffer;
+    strBuffer = strBuffer.left(strBuffer.indexOf("\r\n")-1);
+
+    QStringList dateTimeInfo = strBuffer.split(" ");
+    qDebug() << dateTimeInfo;
+    qDebug () << "size " << dateTimeInfo.size();
+    if (dateTimeInfo.size() != 3){
+        ++cNoReading;
+        if (cNoReading >= 3)
+            noReading = true;
+        return;
+    }
+
+    yval = dateTimeInfo.at(2).toDouble();
+    if (yval > 4) return;
+
     noReading = false;
+    cNoReading = 0;
+
+    distance = 4 - yval; // base height - sensor distance
+    yval = distance;
 
     qreal h = plotArea().height();
     qreal w = plotArea().width();
     int xtc = ceil(w/(h/6));
     qDebug() << xtc;
     xAxis->setTickCount(xtc);
-    qreal x = plotArea().width()/15000;
+    qreal x = plotArea().width()/120000;
 
     QDateTime dateTime;
-    dateTime.setDate(QDate::currentDate());
-    dateTime.setTime(QTime::currentTime());
+    dateTime.setDate(QDate::fromString(dateTimeInfo.at(0), "yyyy/MM/dd"));
+    dateTime.setTime(QTime::fromString(dateTimeInfo.at(1), "HH:mm:ss"));
     xval = dateTime.toMSecsSinceEpoch();
     strDateTime = dateTime.toString("MM/dd/yyyy HH:mm:ss");
 
@@ -160,10 +200,6 @@ void Chart::handleTimeout()
              << "diff : " << diff;
 
     prevTime = dateTime;
-
-    yval = QString(buffer).toDouble();
-    distance = 4 - yval; // base height - sensor distance
-    yval = distance;
 
     qDebug() << "serial buffer:" << buffer
              << "yval: " << yval
