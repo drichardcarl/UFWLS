@@ -50,3 +50,5 @@ FORMS += \
 
 RESOURCES += \
     ufwls.qrc
+
+win32:RC_ICONS += ufwls.ico
