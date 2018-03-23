@@ -9,7 +9,8 @@ UFWLS::UFWLS(QWidget *parent) :
     lastRow(0),
     lastItem(nullptr),
     settings(new SettingsDialog),
-    serial(new QSerialPort)
+    serial(new QSerialPort),
+    winAbout(new about(this))
 {
     ui->setupUi(this);
 }
@@ -328,18 +329,7 @@ void UFWLS::keyPressEvent(QKeyEvent *event){
     }
 
     if (event->key() == Qt::Key_F1){
-        alert(0,
-              "About UFWLS",
-              "<span style=\"text-align:center;\">"
-              "<b><u>UFWLS</u></b><br>"
-              "Ultrasonic Flood Water Level Sensor<br>"
-              "Written using Qt Framework<br>"
-              "<br><br>"
-              "<b><u>Programmer</u></b><br>"
-              "Carl Richard Dumdum<br>"
-              "All rights reserved 2018"
-              "</span>",
-              this);
+        winAbout->exec();
     }
 }
 

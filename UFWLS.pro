@@ -30,7 +30,8 @@ SOURCES += \
     alert.cpp \
     winaddcontact.cpp \
     dbmanager.cpp \
-    settingsdialog.cpp
+    settingsdialog.cpp \
+    about.cpp
 
 HEADERS += \
         ufwls.h \
@@ -38,12 +39,14 @@ HEADERS += \
     alert.hpp \
     winaddcontact.h \
     dbmanager.hpp \
-    settingsdialog.h
+    settingsdialog.h \
+    about.h
 
 FORMS += \
         ufwls.ui \
     winaddcontact.ui \
-    settingsdialog.ui
+    settingsdialog.ui \
+    about.ui
 
 RESOURCES += \
     ufwls.qrc

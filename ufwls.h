@@ -27,6 +27,7 @@
 #include "winaddcontact.h"
 #include "dbmanager.hpp"
 #include "settingsdialog.h"
+#include "about.h"
 
 typedef QPair<QPointF, QString> Data;
 typedef QList<Data> DataList;
@@ -91,6 +92,7 @@ private:
     DbManager* dbmngr;
     QSystemTrayIcon* trayIcon;
     QTableWidgetItem* lastItem;
+    about* winAbout;
     int lastRow;
 
     SettingsDialog* settings;
@@ -99,6 +101,7 @@ private:
     // SMS = [NAME, CONTACT #, MESSAGE]
     QList<SMS> smsBuffer;
     int smsIndex;
+
 
 };
 
